@@ -24,7 +24,7 @@ namespace bdm {
 // 0. extending cell behaviour "class"
 BDM_SIM_OBJECT(MyCell, Cell){
 
-  BDM_SIM_OBJECT_HEADER(MyCell,Cell,1,cell_VC_);
+  BDM_SIM_OBJECT_HEADER(MyCell,Cell,1,cell_VC_,cell_IR_);
    public:
     MyCellExt() {}
     explicit MyCellExt(const std::array<double, 3>& position) : Base(position) {}
@@ -34,8 +34,14 @@ BDM_SIM_OBJECT(MyCell, Cell){
     }
     double GetGrowthRate() const { return cell_VC_[kIdx]; }
 
+    void SetIR( double IR ) {
+      cell_IR_[kIdx] = IR;
+    }
+    double GetIR() const { return cell_IR_[kIdx]; }
+
    private:
     vec<int> cell_VC_;
+    vec<int> cell_IR_;
 };
 
 // 1. Growth behaviour
@@ -62,9 +68,14 @@ struct GrowthModule : public BaseBiologyModule {
       cell->ChangeVolume(cell->GetGrowthRate()*100); // Decreasing volume
 
     } else if (cell->GetGrowthRate() < 0) {
-      cell->ChangeVolume(cell->GetGrowthRate()*100); //Increasing volume
+      double IR = cell->GetIR();
+        if (cell->GetDiameter() > 0.7*IR){
+          cell->ChangeVolume(cell->GetGrowthRate()*100); //Increasing volume
+        } else {
+          cell->ChangeVolume(1); // Cell has reached Osmal equilibrium
+        }
     } else {
-      cell->ChangeVolume(0); // Osmoality is balanced therefoe volume is constant.
+      cell->ChangeVolume(1); // Osmoality is balanced therefoe volume is constant.
     }
   }
 
@@ -97,7 +108,7 @@ inline int Simulate(int argc, const char** argv) {
   auto* param = simulation.GetParam();
   auto* random = simulation.GetRandom();
 
-  size_t nb_of_cells = 1000;  // number of cells in the simulation
+  size_t nb_of_cells = 20;  // number of cells in the simulation
   double x_coord, y_coord, z_coord;
 
   // create a structure to contain cells
@@ -116,8 +127,9 @@ inline int Simulate(int argc, const char** argv) {
     // creating the cell at position x, y, z
     MyCell cell({x_coord, y_coord, z_coord});
     // set cell parameters
-    cell.SetDiameter(7);
-    cell.SetGrowthRate(5,1,1,1,1);
+    cell.SetDiameter(40);
+    cell.SetIR(cell->GetDiameter());
+    cell.SetGrowthRate(200,1,1,1,-1);
     cell.AddBiologyModule(GrowthModule());
     cells->push_back(cell);  // put the created cell in our cells structure
   }
@@ -131,15 +143,16 @@ inline int Simulate(int argc, const char** argv) {
 
     // creating the cell at position x, y, z
     MyCell cell({x_coord, y_coord, z_coord});
-    cell.SetDiameter(2);
-    cell.SetGrowthRate(10,1,1,1,1);
+    cell.SetDiameter(35);
+    cell.SetIR(cell->GetDiameter());
+    cell.SetGrowthRate(50,1,1,1,-1);
     cell.AddBiologyModule(GrowthModule());
     cells->push_back(cell);  // put the created cell in our cells structure
     }
     cells->Commit();  // commit cells
 
   // Run simulation for one timestep
-  simulation.GetScheduler()->Simulate(50);
+  simulation.GetScheduler()->Simulate(20);
 
   std::cout << "Simulation completed successfully!" << std::endl;
   return 0;
