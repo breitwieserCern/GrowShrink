@@ -9,7 +9,7 @@
 // See the LICENSE file distributed with this work for details.
 // See the NOTICE file distributed with this work for additional information
 // regarding copyright ownership.
-//
+// Modified version of JeandeMontigny Tumor concept. https://github.com/JeandeMontigny/tutorial_jean/blob/master/src/tutorial_jean.h
 // -----------------------------------------------------------------------------
 #ifndef GROWSHRINK_H_
 #define GROWSHRINK_H_
