@@ -9,7 +9,7 @@
 // See the LICENSE file distributed with this work for details.
 // See the NOTICE file distributed with this work for additional information
 // regarding copyright ownership.
-// Modified version of JeandeMontigny Tumor concept. https://github.com/JeandeMontigny/tutorial_jean/blob/master/src/tutorial_jean.h
+//
 // -----------------------------------------------------------------------------
 #ifndef GROWSHRINK_H_
 #define GROWSHRINK_H_
@@ -39,9 +39,9 @@ BDM_SIM_OBJECT(MyCell, Cell){
 };
 
 // 1. Growth behaviour
-struct GrowShrink : public BaseBiologyModule {
-  GrowShrink() : BaseBiologyModule(gAllEventIds) {}
-  GrowShrink(double threshold, double growth_rate,
+struct GrowthModule : public BaseBiologyModule {
+  GrowthModule() : BaseBiologyModule(gAllEventIds) {}
+  GrowthModule(double threshold, double growth_rate,
              std::initializer_list<EventId> event_list)
       : BaseBiologyModule(event_list),
         threshold_(threshold),
@@ -49,7 +49,7 @@ struct GrowShrink : public BaseBiologyModule {
 
   /// Default event constructor
   template <typename TEvent, typename TBm>
-  GrowShrink(const TEvent& event, TBm* other, uint64_t new_oid = 0) {
+  GrowthModule(const TEvent& event, TBm* other, uint64_t new_oid = 0) {
     threshold_ = other->threshold_;
     growth_rate_ = other->growth_rate_;
   }
@@ -58,18 +58,18 @@ struct GrowShrink : public BaseBiologyModule {
   template <typename T, typename TSimulation = Simulation<>>
   void Run(T* cell) {
 
-    if (cell->GetGrowthRate() < 0) {
-      cell->ChangeVolume(growth_rate_); // Decreasing volume
+    if (cell->GetGrowthRate() > 0) {
+      cell->ChangeVolume(cell->GetGrowthRate()*100); // Decreasing volume
 
-    } else if (cell->GetGrowthRate() > 0) {
-      cell->ChangeVolume(-growth_rate_); //Increasing volume
+    } else if (cell->GetGrowthRate() < 0) {
+      cell->ChangeVolume(cell->GetGrowthRate()*100); //Increasing volume
     } else {
       cell->ChangeVolume(0); // Osmoality is balanced therefoe volume is constant.
     }
   }
 
  private :
-  BDM_CLASS_DEF_NV(GrowShrink, 1);
+  BDM_CLASS_DEF_NV(GrowthModule, 1);
   double threshold_ = 0;
   double growth_rate_  = 1; // NEED TO CORRECT;
 };
@@ -81,7 +81,7 @@ BDM_CTPARAM() {
   using SimObjectTypes = CTList<MyCell>;  // use MyCell object
 
   // Override default BiologyModules for Cell
-  BDM_CTPARAM_FOR(bdm, MyCell) { using BiologyModules = CTList<GrowShrink>; };
+  BDM_CTPARAM_FOR(bdm, MyCell) { using BiologyModules = CTList<GrowthModule>; };
 };
 
 inline int Simulate(int argc, const char** argv) {
@@ -97,7 +97,7 @@ inline int Simulate(int argc, const char** argv) {
   auto* param = simulation.GetParam();
   auto* random = simulation.GetRandom();
 
-  size_t nb_of_cells = 10;  // number of cells in the simulation
+  size_t nb_of_cells = 1000;  // number of cells in the simulation
   double x_coord, y_coord, z_coord;
 
   // create a structure to contain cells
@@ -116,20 +116,30 @@ inline int Simulate(int argc, const char** argv) {
     // creating the cell at position x, y, z
     MyCell cell({x_coord, y_coord, z_coord});
     // set cell parameters
-    cell.SetDiameter(7.5);
+    cell.SetDiameter(7);
+    cell.SetGrowthRate(5,1,1,1,1);
+    cell.AddBiologyModule(GrowthModule());
     cells->push_back(cell);  // put the created cell in our cells structure
   }
 
-    MyCell cell({20, 50, 50});
-    cell.SetDiameter(6);
-    cell.SetGrowthRate(30,1,1,1,1);
-    cell.AddBiologyModule(GrowShrink());
-    cells->push_back(cell);  // put the created cell in our cells structure
+    for (size_t i = 0; i < nb_of_cells; ++i) {
+    // our modelling will be a cell cube of 100*100*100
+    // random double between 0 and 100
+    x_coord = random->Uniform(param->min_bound_, param->max_bound_);
+    y_coord = random->Uniform(param->min_bound_, param->max_bound_);
+    z_coord = random->Uniform(param->min_bound_, param->max_bound_);
 
+    // creating the cell at position x, y, z
+    MyCell cell({x_coord, y_coord, z_coord});
+    cell.SetDiameter(2);
+    cell.SetGrowthRate(10,1,1,1,1);
+    cell.AddBiologyModule(GrowthModule());
+    cells->push_back(cell);  // put the created cell in our cells structure
+    }
     cells->Commit();  // commit cells
 
   // Run simulation for one timestep
-  simulation.GetScheduler()->Simulate(30);
+  simulation.GetScheduler()->Simulate(50);
 
   std::cout << "Simulation completed successfully!" << std::endl;
   return 0;
