@@ -24,7 +24,7 @@ namespace bdm {
 // 0. extending cell behaviour "class"
 BDM_SIM_OBJECT(MyCell, Cell){
 
-  BDM_SIM_OBJECT_HEADER(MyCell,Cell,1,cell_VC_,cell_IR_);
+  BDM_SIM_OBJECT_HEADER(MyCell,Cell,1,cell_VC_,cell_IR_,cell_CR_,cell_T_,cell_L_,cell_IL_);
    public:
     MyCellExt() {}
     explicit MyCellExt(const std::array<double, 3>& position) : Base(position) {}
@@ -38,10 +38,36 @@ BDM_SIM_OBJECT(MyCell, Cell){
       cell_IR_[kIdx] = IR;
     }
     double GetIR() const { return cell_IR_[kIdx]; }
+// Setter for Cooling Rate
+    void SetCR( double CR ) {
+      cell_CR_[kIdx] = CR;
+    }
+    double GetCR() const { return cell_CR_[kIdx]; }
+// Temperature Setter
+   void SetT( double T ) {
+      cell_T_[kIdx] = T;
+    }
+    double GetT() const { return cell_T_[kIdx]; }
+// Hydraulic permeability setter for T = const , this is also constant.
+   void SetL(double LR, double AE ,double R ,double TI, double RT){
+      cell_L_[kIdx] = LR*exp((-AE/R)*((1/TI)-(1/RT)));
+
+  }
+      double GetL() const { return cell_T_[kIdx]; }
+//Initial Lp setter
+    void SetIL( double IL ) {
+      cell_IL_[kIdx] = IL;
+    }
+    double GetIL() const { return cell_IL_[kIdx]; }
+
 
    private:
     vec<int> cell_VC_;
     vec<int> cell_IR_;
+    vec<int> cell_CR_;
+    vec<int> cell_T_;
+    vec<int> cell_L_;
+    vec<int> cell_IL_;
 };
 
 // 1. Growth behaviour
@@ -65,12 +91,21 @@ struct GrowthModule : public BaseBiologyModule {
   void Run(T* cell) {
 
     if (cell->GetGrowthRate() > 0) {
-      cell->ChangeVolume(cell->GetGrowthRate()*100); // Decreasing volume
+      cell->ChangeVolume(cell->GetGrowthRate()*1); // Decreasing volume
 
     } else if (cell->GetGrowthRate() < 0) {
       double IR = cell->GetIR();
+      double MT = 263;
         if (cell->GetDiameter() > 0.7*IR){
-          cell->ChangeVolume(cell->GetGrowthRate()*100); //Increasing volume
+          cell->ChangeVolume(cell->GetGrowthRate()*1); //Increasing volume
+          if (cell -> GetT() > MT){
+             double CT = cell -> GetT();
+             cell->SetT(CT - cell->GetCR());
+             double IL = cell->GetIL();
+             cell->SetL(IL,1,1,CT,274);
+          } else {
+            cell->SetT(cell->GetT());
+          }
         } else {
           cell->ChangeVolume(1); // Cell has reached Osmal equilibrium
         }
@@ -129,7 +164,11 @@ inline int Simulate(int argc, const char** argv) {
     // set cell parameters
     cell.SetDiameter(40);
     cell.SetIR(cell->GetDiameter());
-    cell.SetGrowthRate(200,1,1,1,-1);
+    cell.SetCR(1);
+    cell.SetT(274);
+    cell.SetIL(20);
+    cell.SetL(20,1,1,274,274);
+    cell.SetGrowthRate(cell->GetL(),1,1,cell->GetT() - cell->GetCR(),-1);
     cell.AddBiologyModule(GrowthModule());
     cells->push_back(cell);  // put the created cell in our cells structure
   }
@@ -145,7 +184,11 @@ inline int Simulate(int argc, const char** argv) {
     MyCell cell({x_coord, y_coord, z_coord});
     cell.SetDiameter(30);
     cell.SetIR(cell->GetDiameter());
-    cell.SetGrowthRate(10,1,1,1,-1);
+    cell.SetCR(1);
+    cell.SetT(274);
+    cell.SetIL(30);
+    cell.SetL(30,1,1,274,274);
+    cell.SetGrowthRate(cell->GetL(),1,1,cell->GetT() - cell->GetCR(),-1);
     cell.AddBiologyModule(GrowthModule());
     cells->push_back(cell);  // put the created cell in our cells structure
     }
@@ -159,8 +202,13 @@ inline int Simulate(int argc, const char** argv) {
     // creating the cell at position x, y, z
     MyCell cell({x_coord, y_coord, z_coord});
     cell.SetDiameter(35);
+    cell.SetAdherence(30);
     cell.SetIR(cell->GetDiameter());
-    cell.SetGrowthRate(50,1,1,1,-1);
+    cell.SetCR(1);
+    cell.SetT(274);
+    cell.SetIL(25);
+    cell.SetL(25,1,1,274,274);
+    cell.SetGrowthRate(cell->GetL(),1,1,cell->GetT() - cell->GetCR(),-1);
     cell.AddBiologyModule(GrowthModule());
     cells->push_back(cell);  // put the created cell in our cells structure
     }
@@ -168,7 +216,7 @@ inline int Simulate(int argc, const char** argv) {
     cells->Commit();  // commit cells
 
   // Run simulation for one timestep
-  simulation.GetScheduler()->Simulate(500);
+  simulation.GetScheduler()->Simulate(50);
 
   std::cout << "Simulation completed successfully! FTH" << std::endl;
   return 0;
