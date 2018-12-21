@@ -59,7 +59,7 @@ BDM_SIM_OBJECT(MyCell, Cell){
       cell_IL_[kIdx] = IL;
     }
     double GetIL() const { return cell_IL_[kIdx]; }
-
+// Cell Surface Area Setter
 
    private:
     vec<int> cell_VC_;
@@ -157,7 +157,7 @@ inline int Simulate(int argc, const char** argv) {
     // random double between 0 and 100
     x_coord = random->Uniform(param->min_bound_, param->max_bound_);
     y_coord = random->Uniform(param->min_bound_, param->max_bound_);
-    z_coord = random->Uniform(param->min_bound_, 500);
+    z_coord = random->Uniform(param->min_bound_, 250);
 
     // creating the cell at position x, y, z
     MyCell cell({x_coord, y_coord, z_coord});
@@ -178,7 +178,7 @@ inline int Simulate(int argc, const char** argv) {
     // random double between 0 and 100
     x_coord = random->Uniform(param->min_bound_, param->max_bound_);
     y_coord = random->Uniform(param->min_bound_, param->max_bound_);
-    z_coord = random->Uniform(500, param->max_bound_);
+    z_coord = random->Uniform(750, param->max_bound_);
 
     // creating the cell at position x, y, z
     MyCell cell({x_coord, y_coord, z_coord});
@@ -202,7 +202,6 @@ inline int Simulate(int argc, const char** argv) {
     // creating the cell at position x, y, z
     MyCell cell({x_coord, y_coord, z_coord});
     cell.SetDiameter(35);
-    cell.SetAdherence(30);
     cell.SetIR(cell->GetDiameter());
     cell.SetCR(1);
     cell.SetT(274);
